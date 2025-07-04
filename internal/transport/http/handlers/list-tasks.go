@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/labstack/echo/v4"
 	"github.com/tehrelt/wm-test/internal/transport/http/handlers/dto"
@@ -24,6 +25,10 @@ func ListTasks(uc *usecase.UseCase) echo.HandlerFunc {
 		for i := range tasks {
 			response.Tasks[i] = dto.TaskFrom(tasks[i])
 		}
+
+		sort.Slice(response.Tasks, func(i, j int) bool {
+			return response.Tasks[i].CreatedAt.Before(response.Tasks[j].CreatedAt)
+		})
 
 		return c.JSON(http.StatusOK, response)
 	}

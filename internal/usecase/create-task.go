@@ -24,5 +24,7 @@ func (uc *UseCase) CreateTask(ctx context.Context) (*models.Task, error) {
 		return nil, err
 	}
 
+	uc.processor.Enqueue(task)
+
 	return task, nil
 }

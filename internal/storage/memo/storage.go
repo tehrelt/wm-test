@@ -3,6 +3,7 @@ package memo
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/tehrelt/wm-test/internal/models"
@@ -22,8 +23,13 @@ func New() *Storage {
 }
 
 func (s *Storage) Save(ctx context.Context, task *models.Task) error {
+
 	s.m.Lock()
 	defer s.m.Unlock()
+	if _, found := s.data[task.Id]; found {
+		task.UpdatedAt = time.Now()
+	}
+
 	s.data[task.Id] = task
 
 	return nil

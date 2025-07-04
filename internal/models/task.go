@@ -27,16 +27,22 @@ const (
 )
 
 type Task struct {
-	Id        uuid.UUID
-	Status    ProcessStatus
-	CreatedAt time.Time
-	UpdatedAt *time.Time
+	Id                uuid.UUID
+	Status            ProcessStatus
+	StartProcessingAt time.Time
+	EndProcessingAt   time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (t Task) Elapsed() time.Duration {
-	if t.UpdatedAt != nil {
-		return t.UpdatedAt.Sub(t.CreatedAt)
+	if t.Status == PSDone {
+		return t.EndProcessingAt.Sub(t.StartProcessingAt)
 	}
 
-	return time.Since(t.CreatedAt)
+	if t.Status == PSProcessing {
+		return time.Since(t.StartProcessingAt)
+	}
+
+	return 0
 }

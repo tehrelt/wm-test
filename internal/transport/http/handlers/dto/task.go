@@ -10,9 +10,9 @@ import (
 type Task struct {
 	Id        uuid.UUID     `json:"id"`
 	Status    string        `json:"status"`
-	CreatedAt time.Time     `json:"createdAt"`
 	Elapsed   time.Duration `json:"elapsed"`
-	UpdatedAt *time.Time    `json:"updatedAt"`
+	CreatedAt time.Time     `json:"createdAt"`
+	UpdatedAt time.Time     `json:"updatedAt"`
 }
 
 func TaskFrom(m *models.Task) *Task {
