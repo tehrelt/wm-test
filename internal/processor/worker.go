@@ -28,8 +28,8 @@ func (w *worker) run(ctx context.Context) {
 	for task := range w.queue {
 		task.SetStatus(ctx, models.PSProcessing)
 
-		min := 3
-		max := 10
+		min := 3 * 60
+		max := 5 * 60
 		sec := rand.IntN(max-min) + min
 
 		w.logger.Info("processing task", slog.String("task", task.Id.String()), slog.Int("sec", sec))
