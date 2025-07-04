@@ -14,36 +14,31 @@ type StatusUpdateFn func(context.Context, *models.Task) error
 
 type processingTask struct {
 	*models.Task
-	update StatusUpdateFn
-	ctx    context.Context
+	ch  chan<- *models.Task
+	ctx context.Context
 }
 
 func (pt *processingTask) SetStatus(ctx context.Context, status models.ProcessStatus) error {
 	pt.Status = status
 
-	if err := pt.update(ctx, pt.Task); err != nil {
-		return err
-	}
+	pt.ch <- pt.Task
 
 	return nil
 }
 
 type processingTaskFactory struct {
-	update StatusUpdateFn
+	pending chan *models.Task
 }
 
-func (ptf *processingTaskFactory) New(task *models.Task) *processingTask {
-	return &processingTask{
-		Task:   task,
-		update: ptf.update,
-	}
+func newProcessingTaskFactory(queueSize int) *processingTaskFactory {
+	return &processingTaskFactory{pending: make(chan *models.Task, queueSize)}
 }
 
-func (ptf *processingTaskFactory) NewWithContext(task *models.Task, ctx context.Context) *processingTask {
+func (ptf *processingTaskFactory) NewWithContext(ctx context.Context, task *models.Task) *processingTask {
 	return &processingTask{
-		Task:   task,
-		update: ptf.update,
-		ctx:    ctx,
+		ctx:  ctx,
+		Task: task,
+		ch:   ptf.pending,
 	}
 }
 
@@ -75,20 +70,25 @@ func (cm *cancelMap) get(id uuid.UUID) (context.CancelFunc, bool) {
 	return cancel, ok
 }
 
+type onStatusUpdateFn func(context.Context, *models.Task) error
+
 type TaskProcessor struct {
 	queue   chan *processingTask
 	factory *processingTaskFactory
 	logger  *slog.Logger
 
+	subs []onStatusUpdateFn
+
 	cancels *cancelMap
 }
 
-func NewTaskProcessor(update StatusUpdateFn, queueSize int) *TaskProcessor {
+func NewTaskProcessor(queueSize int) *TaskProcessor {
 	tp := &TaskProcessor{
 		queue:   make(chan *processingTask, queueSize),
-		factory: &processingTaskFactory{update: update},
 		logger:  slog.With(slog.String("comp", "processor.TaskProcessor")),
+		factory: newProcessingTaskFactory(queueSize),
 		cancels: newCancelMap(),
+		subs:    make([]onStatusUpdateFn, 0),
 	}
 
 	return tp
@@ -99,10 +99,21 @@ func (tp *TaskProcessor) Start(ctx context.Context, workerCount int) error {
 		return errors.New("workerCount must be greater than 0")
 	}
 
+	tp.logger.Info("starting task processor", slog.Int("worker_count", workerCount))
 	for i := 0; i < workerCount; i++ {
 		w := newWorker(i, tp.queue)
 		go w.run(ctx)
 	}
+
+	go func() {
+		for task := range tp.factory.pending {
+			for _, fn := range tp.subs {
+				if err := fn(ctx, task); err != nil {
+					tp.logger.Error("failed to update task status", "error", err)
+				}
+			}
+		}
+	}()
 
 	return nil
 }
@@ -110,7 +121,11 @@ func (tp *TaskProcessor) Start(ctx context.Context, workerCount int) error {
 func (tp *TaskProcessor) Enqueue(task *models.Task) {
 	ctx, cancel := context.WithCancel(context.Background())
 	tp.cancels.set(task.Id, cancel)
-	tp.queue <- tp.factory.NewWithContext(task, ctx)
+	tp.queue <- tp.factory.NewWithContext(ctx, task)
+}
+
+func (tp *TaskProcessor) Subscribe(fn onStatusUpdateFn) {
+	tp.subs = append(tp.subs, fn)
 }
 
 func (tp *TaskProcessor) Cancel(taskID uuid.UUID) bool {

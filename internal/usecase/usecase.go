@@ -26,17 +26,14 @@ type UseCase struct {
 
 func New(cfg *config.Config, storage TaskStorage) *UseCase {
 	uc := &UseCase{
-		cfg:     cfg,
-		storage: storage,
-		logger:  slog.With(slog.String("comp", "usecase.UseCase")),
+		cfg:       cfg,
+		storage:   storage,
+		processor: processor.NewTaskProcessor(100),
+		logger:    slog.With(slog.String("comp", "usecase.UseCase")),
 	}
 
-	uc.setup(context.Background())
+	uc.processor.Start(context.Background(), uc.cfg.WorkerCount)
+	uc.processor.Subscribe(uc.updateStatus)
 
 	return uc
-}
-
-func (uc *UseCase) setup(ctx context.Context) {
-	uc.processor = processor.NewTaskProcessor(uc.updateStatus, 100)
-	uc.processor.Start(ctx, uc.cfg.WorkerCount)
 }
