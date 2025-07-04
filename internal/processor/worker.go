@@ -31,10 +31,17 @@ func (w *worker) run(ctx context.Context) {
 		max := 10
 		sec := rand.IntN(max-min) + min
 
-		w.logger.Info("processing task", "task", task.Id, "sec", sec)
-		time.Sleep(time.Duration(sec) * time.Second)
+		w.logger.Info("processing task", slog.String("task", task.Id.String()), slog.Int("sec", sec))
+
+		select {
+		case <-task.ctx.Done():
+			w.logger.Info("task canceled", slog.String("task", task.Id.String()))
+			task.SetStatus(ctx, models.PSError)
+			continue
+		case <-time.After(time.Duration(sec) * time.Second):
+		}
 
 		task.SetStatus(ctx, models.PSDone)
-		w.logger.Info("task done", "task", task.Id)
+		w.logger.Info("task done", slog.String("task", task.Id.String()))
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
+	"github.com/tehrelt/wm-test/internal/processor"
 	"github.com/tehrelt/wm-test/internal/transport/http/handlers"
 	"github.com/tehrelt/wm-test/internal/usecase"
 )
@@ -14,7 +15,7 @@ type Server struct {
 	uc     *usecase.UseCase
 }
 
-func New(uc *usecase.UseCase) *Server {
+func New(uc *usecase.UseCase, tp *processor.TaskProcessor) *Server {
 	return &Server{
 		uc:     uc,
 		router: echo.New(),

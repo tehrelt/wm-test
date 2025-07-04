@@ -18,6 +18,10 @@ func (ps ProcessStatus) String() string {
 	return labels[ps]
 }
 
+func (ps ProcessStatus) IsCancelable() bool {
+	return ps == PSWait || ps == PSProcessing
+}
+
 const (
 	PSNil ProcessStatus = iota
 	PSWait
@@ -45,4 +49,8 @@ func (t Task) Elapsed() time.Duration {
 	}
 
 	return 0
+}
+
+func (t Task) IsCancelable() bool {
+	return t.Status == PSWait || t.Status == PSProcessing
 }
