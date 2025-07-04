@@ -5,18 +5,20 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
-	"github.com/tehrelt/wm-test/internal/processor"
+	"github.com/tehrelt/wm-test/internal/config"
 	"github.com/tehrelt/wm-test/internal/transport/http/handlers"
 	"github.com/tehrelt/wm-test/internal/usecase"
 )
 
 type Server struct {
+	cfg    *config.Config
 	router *echo.Echo
 	uc     *usecase.UseCase
 }
 
-func New(uc *usecase.UseCase, tp *processor.TaskProcessor) *Server {
+func New(cfg *config.Config, uc *usecase.UseCase) *Server {
 	return &Server{
+		cfg:    cfg,
 		uc:     uc,
 		router: echo.New(),
 	}
@@ -30,10 +32,8 @@ func (a *Server) setup() {
 }
 
 func (a *Server) Run() error {
-	port := 8080
 	a.setup()
-
-	return a.router.Start(fmt.Sprintf(":%d", port))
+	return a.router.Start(fmt.Sprintf(":%d", a.cfg.Port))
 }
 
 func (a *Server) Shutdown(ctx context.Context) error {

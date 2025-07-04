@@ -9,22 +9,22 @@ import (
 	"time"
 
 	"github.com/tehrelt/wm-test/internal/app"
-	"github.com/tehrelt/wm-test/internal/processor"
+	"github.com/tehrelt/wm-test/internal/config"
 	"github.com/tehrelt/wm-test/internal/storage/memo"
 	"github.com/tehrelt/wm-test/internal/transport/http"
 	"github.com/tehrelt/wm-test/internal/usecase"
 )
 
 func main() {
-	st := memo.New()
-	// Создаём TaskProcessor с update-функцией, queueSize=100
-	tp := processor.NewTaskProcessor(st.Save, 100)
-	uc := usecase.New(st)
-	server := http.New(uc, tp)
-	app := app.New(server)
+	cfg, err := config.New()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Запускаем worker pool
-	tp.Start(nil, 4)
+	storage := memo.New()
+	uc := usecase.New(cfg, storage)
+	server := http.New(cfg, uc)
+	app := app.New(server)
 
 	start := time.Now()
 

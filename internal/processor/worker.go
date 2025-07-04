@@ -2,6 +2,7 @@ package processor
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math/rand/v2"
 	"time"
@@ -19,7 +20,7 @@ func newWorker(id int, queue chan *processingTask) *worker {
 	return &worker{
 		id:     id,
 		queue:  queue,
-		logger: slog.With(slog.String("comp", "processor.worker"), slog.Int("id", id)),
+		logger: slog.With(slog.String("comp", fmt.Sprintf("processor.worker/%d", id))),
 	}
 }
 

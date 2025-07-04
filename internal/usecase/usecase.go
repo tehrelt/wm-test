@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/tehrelt/wm-test/internal/config"
 	"github.com/tehrelt/wm-test/internal/models"
 	"github.com/tehrelt/wm-test/internal/processor"
 )
@@ -17,13 +18,15 @@ type TaskStorage interface {
 }
 
 type UseCase struct {
+	cfg       *config.Config
 	storage   TaskStorage
 	logger    *slog.Logger
 	processor *processor.TaskProcessor
 }
 
-func New(storage TaskStorage) *UseCase {
+func New(cfg *config.Config, storage TaskStorage) *UseCase {
 	uc := &UseCase{
+		cfg:     cfg,
 		storage: storage,
 		logger:  slog.With(slog.String("comp", "usecase.UseCase")),
 	}
@@ -35,5 +38,5 @@ func New(storage TaskStorage) *UseCase {
 
 func (uc *UseCase) setup(ctx context.Context) {
 	uc.processor = processor.NewTaskProcessor(uc.updateStatus, 100)
-	uc.processor.Start(ctx, 4)
+	uc.processor.Start(ctx, uc.cfg.WorkerCount)
 }
