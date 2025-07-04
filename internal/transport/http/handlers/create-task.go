@@ -1,24 +1,21 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
 	"github.com/tehrelt/wm-test/internal/transport/http/handlers/dto"
 	"github.com/tehrelt/wm-test/internal/usecase"
 )
 
-func CreateTask(uc *usecase.UseCase) fiber.Handler {
-	return func(c *fiber.Ctx) {
+func CreateTask(uc *usecase.UseCase) echo.HandlerFunc {
+	return func(c echo.Context) error {
 
-		task, err := uc.CreateTask(c.Context())
+		task, err := uc.CreateTask(c.Request().Context())
 		if err != nil {
-			c.Status(500).JSON(fiber.Map{
-				"error":   "unexpected error",
-				"details": err.Error(),
-			})
-
-			return
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
 
-		c.JSON(dto.TaskFrom(task))
+		return c.JSON(http.StatusOK, dto.TaskFrom(task))
 	}
 }
